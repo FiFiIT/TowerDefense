@@ -8,6 +8,9 @@ const W_HEIGHT = 600;
 const CELL_SIZE = 100;
 const CELL_GAP = 3;
 const gameGrid = [];
+const defenders = [];
+let resources = 400;
+let defenderCost = 100;
 
 canvas.width = W_WIDTH;
 canvas.height = W_HEIGHT;
@@ -37,6 +40,17 @@ canvas.addEventListener("mousemove", (e) => {
 canvas.addEventListener("mouseleave", () => {
   mouse.x = undefined;
   mouse.y = undefined;
+});
+canvas.addEventListener("click", () => {
+  const gridPositionX = mouse.x - (mouse.x % CELL_SIZE);
+  const gridPositionY = mouse.y - (mouse.y % CELL_SIZE);
+  if (gridPositionY < CELL_SIZE) return;
+  if (resources - defenderCost < 0) return;
+  if (defenders.some((d) => d.x == gridPositionX && d.y == gridPositionY))
+    return;
+
+  resources -= defenderCost;
+  defenders.push(new Defender(gridPositionX, gridPositionY));
 });
 
 class Cell {
@@ -72,6 +86,37 @@ function drawGrid() {
   gameGrid.forEach((cell) => cell.draw());
 }
 
+function drawDefenders() {
+  defenders.forEach((d) => d.draw());
+}
+
+class Defender {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+    this.width = CELL_SIZE;
+    this.height = CELL_SIZE;
+    this.shooting = false;
+    this.health = 100;
+    this.projectiles = [];
+    this.timer = 0;
+  }
+
+  draw() {
+    ctx.fillStyle = "green";
+    ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    ctx.fillStyle = "red";
+    ctx.font = "20px Arial";
+    var tw = ctx.measureText(this.health).width / 2;
+    ctx.fillText(
+      Math.floor(this.health),
+      this.x + this.width / 2 - tw,
+      this.y + this.height / 2 + 5
+    );
+  }
+}
+
 function fraps() {
   if (!lastTimeCalled) {
     lastTimeCalled = performance.now();
@@ -83,7 +128,7 @@ function fraps() {
   fps.innerHTML = Math.ceil(1 / delta) + " FPS";
 }
 
-window.countFPS = (function () {
+countFPS = (function () {
   var lastLoop = new Date().getMilliseconds();
   var count = 1;
   var fps = 0;
@@ -110,17 +155,26 @@ function collision(a, b) {
   );
 }
 
+function handleGameStatus() {
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText(`Resources: ${resources}$`, 10, 30);
+}
+
 fillGameGrid();
 
 function animate() {
   fps.innerHTML = countFPS() + " FPS";
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  drawGrid();
-
   ctx.fillStyle = "blue";
   ctx.fillRect(0, 0, controlsBar.width, controlsBar.height);
   requestAnimationFrame(animate);
+
+  drawGrid();
+  drawDefenders();
+
+  handleGameStatus();
 }
 
 animate();
